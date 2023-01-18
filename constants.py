@@ -1,8 +1,10 @@
 from enum import Enum
 from pathlib import Path
 
-from pygame.font import Font
+from pygame.font import Font, init as init_font
 from pygame import Color
+
+init_font()
 
 
 class Colors:
@@ -46,6 +48,20 @@ class PlayerType(Enum):
         return self.value
 
 
+class DirectionType(Enum):
+    UP = 1
+    DOWN = 2
+    LEFT = 3
+    RIGHT = 4
+
+    UNKNOWN = 0  # should not occur
+
+    def __str__(self) -> str:
+        return self.name
+
+
+EMPTY_COLOR = Color("#00000000")
+
 WIDTH = 950
 HEIGHT = 950
 FPS = 60
@@ -53,9 +69,10 @@ FPS = 60
 BORDER = 100
 FIELD_SIZE = 15  # in cells
 CELL_SIZE = (WIDTH - BORDER * 2) // FIELD_SIZE
+CENTRAL_CELL = (FIELD_SIZE // 2, FIELD_SIZE // 2)
 
 OBSTACLE_COUNT = 30
 
 MIN_AIM_DISTANCE = 6
 
-EMPTY_COLOR = Color("#00000000")
+TARGET_REACHED_REWARD = 50

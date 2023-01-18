@@ -2,8 +2,10 @@ import pygame
 
 from util import random_cell, random_aim_cell, cell_distance
 from constants import (
-    Colors, Fonts, CellType, PlayerType,
-    WIDTH, BORDER, FIELD_SIZE, CELL_SIZE, OBSTACLE_COUNT, MIN_AIM_DISTANCE, EMPTY_COLOR
+    Colors, Fonts, CellType, PlayerType, DirectionType,
+    EMPTY_COLOR,
+    WIDTH, BORDER, FIELD_SIZE, CELL_SIZE, CENTRAL_CELL, OBSTACLE_COUNT, MIN_AIM_DISTANCE,
+    TARGET_REACHED_REWARD
 )
 
 
@@ -11,28 +13,25 @@ class Players(pygame.sprite.Sprite):
     def __init__(self) -> None:
         super().__init__()
 
-        self.current = PlayerType.OBLOMOV
-        self.balances = dict.fromkeys(PlayerType, 0)
-
         self.image = pygame.Surface((WIDTH, BORDER), pygame.SRCALPHA)
         self.rect = self.image.get_rect()
 
         self.rect.x = 0
         self.rect.y = 0
 
-    def draw(self, surface: pygame.Surface) -> None:
+    def draw(self, surface: pygame.Surface, balances: dict[PlayerType, int], current_player: PlayerType) -> None:
         self.image.fill(EMPTY_COLOR)
 
-        for index, (player, balance) in enumerate(self.balances.items()):
+        for index, (player, balance) in enumerate(balances.items()):
             name_surface = Fonts.stats.render(
                 str(player),
                 True,
-                Colors.stats_current if player == self.current else Colors.stats
+                Colors.stats_current if player == current_player else Colors.stats
             )
             balance_surface = Fonts.stats.render(
                 str(balance),
                 True,
-                Colors.stats_current if player == self.current else Colors.stats
+                Colors.stats_current if player == current_player else Colors.stats
             )
 
             player_surface = pygame.Surface((WIDTH / 4, BORDER), pygame.SRCALPHA)
@@ -48,9 +47,6 @@ class Players(pygame.sprite.Sprite):
             self.image.blit(player_surface, (WIDTH / 4 * index, 0))
 
         surface.blit(self.image, (0, 0))
-
-    def next_move(self, player: PlayerType | None = None) -> None:
-        self.current = player or tuple(PlayerType)[(tuple(PlayerType).index(self.current) + 1) % 4]
 
 
 class FieldCell(pygame.sprite.Sprite):
@@ -114,7 +110,9 @@ class Field(pygame.sprite.Group):
         self.obstacles.discard(self.shtoltz)
         self.obstacles.discard(self.olga)
         self.obstacles.discard(self.tarantiev)
-        self.obstacles.discard((FIELD_SIZE // 2, FIELD_SIZE // 2))  # field center, Oblomov starts there
+        self.obstacles.discard(CENTRAL_CELL)  # field center, Oblomov starts there
+
+        self.visited_cells = {CENTRAL_CELL}
 
         for x in range(FIELD_SIZE):
             for y in range(FIELD_SIZE):
@@ -153,19 +151,90 @@ class Oblomov(pygame.sprite.Sprite):
     def draw(self, surface: pygame.Surface) -> None:
         surface.blit(self.image, self.rect)
 
-    def move(self, event: pygame.event.Event, field: Field) -> None:
-        if event.type == pygame.KEYDOWN:
-            match event.key:
-                case pygame.K_LEFT | pygame.K_a if self.x > 0 and (self.x - 1, self.y) not in field.obstacles:
-                    self.x -= 1
-                case pygame.K_RIGHT | pygame.K_d \
-                        if self.x < (FIELD_SIZE - 1) and (self.x + 1, self.y) not in field.obstacles:
-                    self.x += 1
-                case pygame.K_UP | pygame.K_w if self.y > 0 and (self.x, self.y - 1) not in field.obstacles:
-                    self.y -= 1
-                case pygame.K_DOWN | pygame.K_s \
-                        if self.y < (FIELD_SIZE - 1) and (self.x, self.y + 1) not in field.obstacles:
-                    self.y += 1
+    def move(
+        self,
+        direction: DirectionType,
+        obstacles: set[tuple[int, int]]
+    ) -> tuple[int, int]:  # (-1, -1) if unsuccessful
+        match direction:
+            case DirectionType.UP if self.y > 0 and (self.x, self.y - 1) not in obstacles:
+                self.y -= 1
+            case DirectionType.DOWN if self.y < (FIELD_SIZE - 1) and (self.x, self.y + 1) not in obstacles:
+                self.y += 1
+            case DirectionType.LEFT if self.x > 0 and (self.x - 1, self.y) not in obstacles:
+                self.x -= 1
+            case DirectionType.RIGHT if self.x < (FIELD_SIZE - 1) and (self.x + 1, self.y) not in obstacles:
+                self.x += 1
+            case _:
+                return -1, -1
 
-            self.rect.x = BORDER + self.x * CELL_SIZE
-            self.rect.y = BORDER + self.y * CELL_SIZE
+        self.rect.x = BORDER + self.x * CELL_SIZE
+        self.rect.y = BORDER + self.y * CELL_SIZE
+
+        return self.x, self.y
+
+
+class Game:
+    def __init__(self) -> None:
+        self.field = Field()
+        self.oblomov = Oblomov(*CENTRAL_CELL)
+        self.players = Players()
+
+        self.movements_left = self.dice()  # how many squares can player move before their move ends
+
+        self.current_player = PlayerType.OBLOMOV
+        self.balances = dict.fromkeys(PlayerType, 0)
+
+    def next_move(self, player: PlayerType | None = None) -> None:
+        self.current_player = player or tuple(PlayerType)[(tuple(PlayerType).index(self.current_player) + 1) % 4]
+
+    def dice(self) -> int:
+        return 3  # TODO
+
+    def oblomov_movement(self, event: pygame.event) -> None:
+        match event.key:
+            case pygame.K_UP | pygame.K_w:
+                direction = DirectionType.UP
+            case pygame.K_DOWN | pygame.K_s:
+                direction = DirectionType.DOWN
+            case pygame.K_LEFT | pygame.K_a:
+                direction = DirectionType.LEFT
+            case pygame.K_RIGHT | pygame.K_d:
+                direction = DirectionType.RIGHT
+            case _:
+                direction = DirectionType.UNKNOWN
+
+        if (coords := self.oblomov.move(direction, self.field.obstacles)) == (-1, -1):
+            return
+
+        self.movements_left -= 1
+        if self.movements_left == 0:
+            self.next_move()
+            self.movements_left = self.dice()
+
+        match coords:
+            case self.field.oblomovka if self.field.oblomovka not in self.field.visited_cells:
+                self.balances[PlayerType.OBLOMOV] += TARGET_REACHED_REWARD
+            case self.field.shtoltz if self.field.shtoltz not in self.field.visited_cells:
+                self.balances[PlayerType.SHTOLTZ] += TARGET_REACHED_REWARD
+            case self.field.olga if self.field.olga not in self.field.visited_cells:
+                self.balances[PlayerType.OLGA] += TARGET_REACHED_REWARD
+            case self.field.tarantiev if self.field.tarantiev not in self.field.visited_cells:
+                self.balances[PlayerType.TARANTIEV] += TARGET_REACHED_REWARD
+
+        self.field.visited_cells.add(coords)
+
+    def update(self, events: list[pygame.event.Event]) -> None:
+        for event in events:
+            if event.type == pygame.KEYDOWN and event.key in [
+                pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN,
+                pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s
+            ]:
+                self.oblomov_movement(event)
+
+    def draw(self, surface: pygame.Surface) -> None:
+        surface.fill("#444444")
+
+        self.field.draw(surface)
+        self.oblomov.draw(surface)
+        self.players.draw(surface, self.balances, self.current_player)

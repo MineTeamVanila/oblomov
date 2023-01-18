@@ -1,38 +1,29 @@
 import pygame
-pygame.init()
 
-from objects import Field, Oblomov, Players
-from constants import WIDTH, HEIGHT, FPS, FIELD_SIZE
-
-
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Бюджет игры: 1000 нервных клеток Андрея")  # игру обломов не делал. По факту
-clock = pygame.time.Clock()
+from objects import Game
+from constants import WIDTH, HEIGHT, FPS
 
 
-field = Field()
-oblomov = Oblomov(FIELD_SIZE // 2, FIELD_SIZE // 2)  # field center
-players = Players()
+if __name__ == "__main__":
+    pygame.init()
 
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Бюджет игры: 1000 нервных клеток Андрея")  # игру обломов не делал. По факту
+    clock = pygame.time.Clock()
 
-done = False
-while not done:
-    clock.tick(FPS)
+    game = Game()
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+    done = False
+    while not done:
+        clock.tick(FPS)
+
+        events = pygame.event.get()
+        if any(map(lambda e: e.type == pygame.QUIT, events)):
             done = True
 
-        oblomov.move(event, field)
+        game.update(events)
+        game.draw(screen)
 
+        pygame.display.flip()
 
-    screen.fill("#444444")
-
-    field.draw(screen)
-    oblomov.draw(screen)
-    players.draw(screen)
-
-
-    pygame.display.flip()
-
-pygame.quit()
+    pygame.quit()
