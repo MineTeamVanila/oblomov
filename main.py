@@ -1,6 +1,6 @@
 import pygame
 
-from objects import Game
+from game import Game
 from constants import WIDTH, HEIGHT, FPS
 
 
