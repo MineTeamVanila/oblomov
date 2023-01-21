@@ -62,8 +62,8 @@ class DirectionType(Enum):
 
 EMPTY_COLOR = Color("#00000000")
 
-WIDTH = 950
-HEIGHT = 950
+WIDTH = 800
+HEIGHT = 800
 FPS = 60
 
 BORDER = 100

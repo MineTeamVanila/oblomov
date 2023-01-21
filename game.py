@@ -1,4 +1,5 @@
 import pygame
+import random
 
 from sprites import Field, Oblomov, Players
 from constants import (
@@ -7,23 +8,29 @@ from constants import (
     TARGET_REACHED_REWARD
 )
 
+import ui
+
 
 class Game:
-    def __init__(self) -> None:
+    def __init__(self, surface: pygame.Surface) -> None:
         self.field = Field()
         self.oblomov = Oblomov(*CENTRAL_CELL)
         self.players = Players()
+
+        self.surface = surface
 
         self.movements_left = self.dice()  # how many squares can player move before their move ends
 
         self.current_player = PlayerType.OBLOMOV
         self.balances = dict.fromkeys(PlayerType, 0)
 
+        
+
     def next_move(self, player: PlayerType | None = None) -> None:
         self.current_player = player or tuple(PlayerType)[(tuple(PlayerType).index(self.current_player) + 1) % 4]
 
     def dice(self) -> int:
-        return 3  # TODO
+        return ui.roll_dice(self.surface)
 
     def oblomov_movement(self, event: pygame.event) -> None:
         match event.key:
