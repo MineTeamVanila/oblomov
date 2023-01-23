@@ -4,7 +4,7 @@ from util import random_cell, random_aim_cell, cell_distance
 from constants import (
     Colors, Fonts, CellType, PlayerType, DirectionType,
     EMPTY_COLOR,
-    WIDTH, BORDER, FIELD_SIZE, CELL_SIZE, CENTRAL_CELL, OBSTACLE_COUNT, MIN_AIM_DISTANCE
+    WIDTH, HEIGHT, BORDER, FIELD_SIZE, CELL_SIZE, CENTRAL_CELL, OBSTACLE_COUNT, MIN_AIM_DISTANCE
 )
 
 
@@ -45,7 +45,7 @@ class Players(pygame.sprite.Sprite):
 
             self.image.blit(player_surface, (WIDTH / 4 * index, 0))
 
-        surface.blit(self.image, (0, 0))
+        surface.blit(self.image, self.rect)
 
 
 class FieldCell(pygame.sprite.Sprite):
@@ -171,3 +171,26 @@ class Oblomov(pygame.sprite.Sprite):
         self.rect.y = BORDER + self.y * CELL_SIZE
 
         return self.x, self.y
+
+
+class Dice(pygame.sprite.Sprite):
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.image = pygame.Surface((WIDTH, BORDER), pygame.SRCALPHA)
+        self.rect = self.image.get_rect()
+
+        self.rect.x = 0
+        self.rect.y = HEIGHT - BORDER
+
+    def draw(self, surface: pygame.Surface, number: int) -> None:
+        self.image.fill(EMPTY_COLOR)
+
+        dice_surface = Fonts.steps.render(f"Шаги: {number}", True, Colors.steps)
+
+        self.image.blit(
+            dice_surface,
+            dice_surface.get_rect(centerx=self.image.get_rect().centerx, centery=self.image.get_rect().centery)
+        )
+
+        surface.blit(self.image, self.rect)

@@ -1,14 +1,13 @@
-import pygame
-import random
+from random import randint
 
-from sprites import Field, Oblomov, Players
+import pygame
+
+from sprites import Field, Oblomov, Players, Dice
 from constants import (
     PlayerType, DirectionType,
     CENTRAL_CELL,
-    TARGET_REACHED_REWARD
+    TARGET_REACHED_REWARD, MAX_STEPS
 )
-
-import ui
 
 
 class Game:
@@ -16,23 +15,32 @@ class Game:
         self.field = Field()
         self.oblomov = Oblomov(*CENTRAL_CELL)
         self.players = Players()
+        self.dice_sprite = Dice()
 
         self.surface = surface
 
-        self.movements_left = self.dice()  # how many squares can player move before their move ends
+        self.steps_left = self.dice()  # how many squares can player move before their move ends
 
         self.current_player = PlayerType.OBLOMOV
         self.balances = dict.fromkeys(PlayerType, 0)
 
-        
+    def update(self, events: list[pygame.event.Event]) -> None:
+        for event in events:
+            if event.type == pygame.KEYDOWN and event.key in [
+                pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN,
+                pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s
+            ]:
+                self.oblomov_step(event)
 
-    def next_move(self, player: PlayerType | None = None) -> None:
-        self.current_player = player or tuple(PlayerType)[(tuple(PlayerType).index(self.current_player) + 1) % 4]
+    def draw(self) -> None:
+        self.surface.fill("#444444")
 
-    def dice(self) -> int:
-        return ui.roll_dice(self.surface)
+        self.field.draw(self.surface)
+        self.oblomov.draw(self.surface)
+        self.players.draw(self.surface, self.balances, self.current_player)
+        self.dice_sprite.draw(self.surface, self.steps_left)
 
-    def oblomov_movement(self, event: pygame.event) -> None:
+    def oblomov_step(self, event: pygame.event) -> None:
         match event.key:
             case pygame.K_UP | pygame.K_w:
                 direction = DirectionType.UP
@@ -48,10 +56,10 @@ class Game:
         if (coords := self.oblomov.move(direction, self.field.obstacles)) == (-1, -1):
             return
 
-        self.movements_left -= 1
-        if self.movements_left == 0:
+        self.steps_left -= 1
+        if self.steps_left == 0:
             self.next_move()
-            self.movements_left = self.dice()
+            self.steps_left = self.dice()
 
         match coords:
             case self.field.oblomovka if self.field.oblomovka not in self.field.visited_cells:
@@ -65,17 +73,9 @@ class Game:
 
         self.field.visited_cells.add(coords)
 
-    def update(self, events: list[pygame.event.Event]) -> None:
-        for event in events:
-            if event.type == pygame.KEYDOWN and event.key in [
-                pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN,
-                pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s
-            ]:
-                self.oblomov_movement(event)
+    def next_move(self, player: PlayerType | None = None) -> None:
+        self.current_player = player or tuple(PlayerType)[(tuple(PlayerType).index(self.current_player) + 1) % 4]
 
-    def draw(self, surface: pygame.Surface) -> None:
-        surface.fill("#444444")
-
-        self.field.draw(surface)
-        self.oblomov.draw(surface)
-        self.players.draw(surface, self.balances, self.current_player)
+    @staticmethod
+    def dice() -> int:
+        return randint(1, MAX_STEPS)

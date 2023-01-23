@@ -17,6 +17,8 @@ class Colors:
     stats = Color("#888888")
     stats_current = Color("#dddddd")
 
+    steps = Color("#dddddd")
+
 
 class Fonts:
     assets_dir = Path("assets")
@@ -24,6 +26,7 @@ class Fonts:
     fonts_dir = Path(assets_dir, "fonts")
 
     stats = Font(Path(fonts_dir, "inter.ttf"), 32)
+    steps = Font(Path(fonts_dir, "inter.ttf"), 48)
 
 
 class CellType(Enum):
@@ -72,7 +75,8 @@ CELL_SIZE = (WIDTH - BORDER * 2) // FIELD_SIZE
 CENTRAL_CELL = (FIELD_SIZE // 2, FIELD_SIZE // 2)
 
 OBSTACLE_COUNT = 30
+MIN_AIM_DISTANCE = 6  # from Oblomov and from other aims
 
-MIN_AIM_DISTANCE = 6
+MAX_STEPS = 6
 
 TARGET_REACHED_REWARD = 50
