@@ -1,13 +1,37 @@
 from enum import Enum
 from pathlib import Path
 
-from pygame.font import Font, init as init_font
 from pygame import Color
+from pygame.image import load
+from pygame.font import Font, init as init_font
 
 init_font()
 
 
+WIDTH = 800
+HEIGHT = 800
+FPS = 60
+
+BORDER = 100
+FIELD_SIZE = 15  # in cells
+CELL_SIZE = (WIDTH - BORDER * 2) // FIELD_SIZE
+CENTRAL_CELL = (FIELD_SIZE // 2, FIELD_SIZE // 2)
+
+OBSTACLE_COUNT = 30
+MIN_AIM_DISTANCE = 6  # from Oblomov and from other aims
+MIN_AIM_SPREAD = 5  # between each other
+
+ANIMATION_SPEED = 4
+
+MAX_STEPS = 6
+TOTAL_MOVES = 99
+
+TARGET_REACHED_REWARD = 50
+
+
 class Colors:
+    empty = Color("#00000000")
+
     wrong = Color("#0000ff")
 
     background = Color("#444444")
@@ -17,16 +41,24 @@ class Colors:
     stats = Color("#888888")
     stats_current = Color("#dddddd")
 
-    steps = Color("#dddddd")
+    moves = Color("#dddddd")
+
+    gold = Color("#ffd700")
+    silver = Color("#c0c0c0")
+    bronze = Color("#cd7f32")
+
+
+class Images:
+    images_dir = Path("assets", "images")
+
+    oblomov = load(Path(images_dir, "oblomov.png"))
 
 
 class Fonts:
-    assets_dir = Path("assets")
-    images_dir = Path(assets_dir, "images")
-    fonts_dir = Path(assets_dir, "fonts")
+    fonts_dir = Path("assets", "fonts")
 
     stats = Font(Path(fonts_dir, "inter.ttf"), 32)
-    steps = Font(Path(fonts_dir, "inter.ttf"), 48)
+    moves = Font(Path(fonts_dir, "inter.ttf"), 48)
 
 
 class CellType(Enum):
@@ -63,20 +95,9 @@ class DirectionType(Enum):
         return self.name
 
 
-EMPTY_COLOR = Color("#00000000")
-
-WIDTH = 800
-HEIGHT = 800
-FPS = 60
-
-BORDER = 100
-FIELD_SIZE = 15  # in cells
-CELL_SIZE = (WIDTH - BORDER * 2) // FIELD_SIZE
-CENTRAL_CELL = (FIELD_SIZE // 2, FIELD_SIZE // 2)
-
-OBSTACLE_COUNT = 30
-MIN_AIM_DISTANCE = 6  # from Oblomov and from other aims
-
-MAX_STEPS = 6
-
-TARGET_REACHED_REWARD = 50
+place_to_color = [
+    Colors.gold,
+    Colors.silver,
+    Colors.bronze,
+    Colors.stats
+]
