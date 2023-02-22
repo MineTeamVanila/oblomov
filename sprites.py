@@ -2,30 +2,29 @@ from math import copysign
 
 import pygame
 
-from util import random_cell, random_aim_cell, cell_distance
+from cards import Card, CardType
+from util import random_cell, random_aim_cell, cell_distance, split_card_description
 from constants import (
-    Colors, Images, Fonts, CellType, PlayerType, DirectionType,
-    WIDTH, HEIGHT, BORDER, FIELD_SIZE, CELL_SIZE, OBSTACLE_COUNT, MIN_AIM_DISTANCE, MIN_AIM_SPREAD, CENTRAL_CELL,
-    ANIMATION_SPEED, place_to_color
+    WIDTH, HEIGHT, BORDER, FIELD_SIZE, CELL_SIZE,
+    OBSTACLE_COUNT, MIN_AIM_DISTANCE, MIN_AIM_SPREAD, CENTRAL_CELL,
+    ANIMATION_SPEED, place_to_color,
+    Colors, Images, Fonts, CellType, PlayerType, DirectionType
 )
 
 
-class Players(pygame.sprite.Sprite):
+class PlayersSprite(pygame.sprite.Sprite):
     def __init__(self) -> None:
         super().__init__()
 
         self.image = pygame.Surface((WIDTH, BORDER), pygame.SRCALPHA)
         self.rect = self.image.get_rect()
 
-        self.rect.x = 0
-        self.rect.y = 0
-
     def draw(
-        self,
-        surface: pygame.Surface,
-        balances: dict[PlayerType, int],
-        current_player: PlayerType,
-        final: bool = False
+            self,
+            surface: pygame.Surface,
+            balances: dict[PlayerType, int],
+            current_player: PlayerType,
+            final: bool = False
     ) -> None:
         places = sorted(set(balances.values()), reverse=True) if final else None
 
@@ -48,33 +47,25 @@ class Players(pygame.sprite.Sprite):
             )
 
             player_surface = pygame.Surface((WIDTH / 4, BORDER), pygame.SRCALPHA)
-            player_surface.blit(
-                name_surface,
-                name_surface.get_rect(centerx=player_surface.get_rect().centerx, y=BORDER / 10),
-            )
-            player_surface.blit(
-                balance_surface,
-                balance_surface.get_rect(centerx=player_surface.get_rect().centerx, y=BORDER / 2),
-            )
+            centerx = player_surface.get_rect().centerx
+            player_surface.blit(name_surface, name_surface.get_rect(centerx=centerx, y=BORDER / 10))
+            player_surface.blit(balance_surface, balance_surface.get_rect(centerx=centerx, y=BORDER / 2))
 
             self.image.blit(player_surface, (WIDTH / 4 * index, 0))
 
         surface.blit(self.image, self.rect)
 
 
-class FieldCell(pygame.sprite.Sprite):
-    def __init__(self, x: int, y: int, type: CellType) -> None:
+class CellSprite(pygame.sprite.Sprite):
+    def __init__(self, x: int, y: int, cell_type: CellType, card_type: CardType | None) -> None:
         super().__init__()
 
-        self.x = x
-        self.y = y
-        self.type = type
+        self.x = x  # on the field
+        self.y = y  # on the field
+        self.type = cell_type
 
         self.image = pygame.Surface((CELL_SIZE, CELL_SIZE))
-        self.rect = self.image.get_rect()
-
-        self.rect.x = BORDER + self.x * CELL_SIZE
-        self.rect.y = BORDER + self.y * CELL_SIZE
+        self.rect = self.image.get_rect(left=BORDER + self.x * CELL_SIZE, top=BORDER + self.y * CELL_SIZE)
 
         match self.type:
             case CellType.EMPTY:
@@ -92,10 +83,21 @@ class FieldCell(pygame.sprite.Sprite):
             case _:  # should not be the case
                 color = "#0000ff"
 
+        self.card_type = card_type
+
         self.image.fill(color)
+        if self.card_type:
+            pygame.draw.polygon(
+                self.image,
+                self.card_type.value,
+                (
+                    (CELL_SIZE / 2, CELL_SIZE / 4), (CELL_SIZE * 0.75, CELL_SIZE / 2),
+                    (CELL_SIZE / 2, CELL_SIZE * 0.75), (CELL_SIZE / 4, CELL_SIZE / 2)
+                )
+            )
 
 
-class Field(pygame.sprite.Group):
+class FieldSpriteGroup(pygame.sprite.Group):
     def __init__(self) -> None:
         super().__init__()
 
@@ -120,32 +122,59 @@ class Field(pygame.sprite.Group):
                 cell_distance(self.tarantiev, self.olga) < MIN_AIM_SPREAD:
             self.tarantiev = random_aim_cell(FIELD_SIZE, MIN_AIM_DISTANCE)
 
-        self.obstacles.discard(self.oblomovka)
-        self.obstacles.discard(self.shtoltz)
-        self.obstacles.discard(self.olga)
-        self.obstacles.discard(self.tarantiev)
-        self.obstacles.discard(CENTRAL_CELL)  # field center, Oblomov starts there
+        self.obstacles = self.obstacles - {self.oblomovka, self.shtoltz, self.olga, self.tarantiev, CENTRAL_CELL}
+
+        movement_cards = set()
+        while len(movement_cards) < 4:
+            if (cell := random_cell(FIELD_SIZE)) in self.obstacles or \
+                    cell in (self.oblomovka, self.shtoltz, self.olga, self.tarantiev, CENTRAL_CELL):
+                continue
+            movement_cards.add(cell)
+
+        economics_cards = set()
+        while len(economics_cards) < 4:
+            if (cell := random_cell(FIELD_SIZE)) in self.obstacles or \
+                    cell in (self.oblomovka, self.shtoltz, self.olga, self.tarantiev, CENTRAL_CELL) or \
+                    cell in movement_cards:
+                continue
+            economics_cards.add(cell)
+
+        life_card = None
+        while life_card is None:
+            if (cell := random_cell(FIELD_SIZE)) in self.obstacles or \
+                    cell in (self.oblomovka, self.shtoltz, self.olga, self.tarantiev, CENTRAL_CELL) or \
+                    cell in movement_cards or \
+                    cell in economics_cards:
+                continue
+            life_card = cell
 
         for x in range(FIELD_SIZE):
             for y in range(FIELD_SIZE):
-                type = CellType.EMPTY
+                cell_type = CellType.EMPTY
+                card_type = None
                 match (x, y):
                     case coords if coords in self.obstacles:
-                        type = CellType.OBSTACLE
+                        cell_type = CellType.OBSTACLE
                     case self.oblomovka:
-                        type = CellType.OBLOMOVKA
+                        cell_type = CellType.OBLOMOVKA
                     case self.shtoltz:
-                        type = CellType.SHTOLTZ
+                        cell_type = CellType.SHTOLTZ
                     case self.olga:
-                        type = CellType.OLGA
+                        cell_type = CellType.OLGA
                     case self.tarantiev:
-                        type = CellType.TARANTIEV
+                        cell_type = CellType.TARANTIEV
+                    case coords if coords in movement_cards:
+                        card_type = CardType.MOVEMENT
+                    case coords if coords in economics_cards:
+                        card_type = CardType.ECONOMICS
+                    case coords if coords == life_card:
+                        card_type = CardType.LIFE
 
                 # noinspection PyTypeChecker
-                self.add(FieldCell(x, y, type))
+                self.add(CellSprite(x, y, cell_type, card_type))
 
 
-class Oblomov(pygame.sprite.Sprite):
+class OblomovSprite(pygame.sprite.Sprite):
     def __init__(self, x: int, y: int) -> None:
         super().__init__()
 
@@ -161,18 +190,18 @@ class Oblomov(pygame.sprite.Sprite):
         )
 
     def draw(self, surface: pygame.Surface) -> None:
-        self.rect.x += (delta_x := copysign(ANIMATION_SPEED, self.transition_x) if self.transition_x else 0)
-        self.rect.y += (delta_y := copysign(ANIMATION_SPEED, self.transition_y) if self.transition_y else 0)
+        self.rect.left += (delta_x := copysign(ANIMATION_SPEED, self.transition_x) if self.transition_x else 0)
+        self.rect.top += (delta_y := copysign(ANIMATION_SPEED, self.transition_y) if self.transition_y else 0)
         self.transition_x -= delta_x
         self.transition_y -= delta_y
 
         surface.blit(self.image, self.rect)
 
     def move(
-        self,
-        direction: DirectionType,
-        obstacles: set[tuple[int, int]]
-    ) -> tuple[int, int]:  # (-1, -1) if unsuccessful
+            self,
+            direction: DirectionType,
+            obstacles: set[tuple[int, int]]
+    ) -> tuple[int, int] | None:
         match direction:
             case DirectionType.UP if self.y > 0 and (self.x, self.y - 1) not in obstacles:
                 self.y -= 1
@@ -187,34 +216,74 @@ class Oblomov(pygame.sprite.Sprite):
                 self.x += 1
                 self.transition_x += CELL_SIZE
             case _:
-                return -1, -1
+                return
 
         return self.x, self.y
 
 
-class Moves(pygame.sprite.Sprite):
+class MovesSprite(pygame.sprite.Sprite):
     def __init__(self) -> None:
         super().__init__()
 
         self.image = pygame.Surface((WIDTH, BORDER), pygame.SRCALPHA)
-        self.rect = self.image.get_rect()
+        self.rect = self.image.get_rect(top=HEIGHT - BORDER)
+        self.base_rect = self.image.get_rect()
 
-        self.rect.x = 0
-        self.rect.y = HEIGHT - BORDER
-
-    def draw(self, surface: pygame.Surface, steps: int, moves: int) -> None:
+    def draw(self, surface: pygame.Surface, moves: int, steps: int, boost: int) -> None:
         self.image.fill(Colors.empty)
 
         steps_surface = Fonts.moves.render(f"Шаги: {steps}", True, Colors.moves)
         moves_surface = Fonts.moves.render(f"Ходы: {moves}", True, Colors.moves)
+        if boost > 0:
+            boost_surface = Fonts.moves.render(f"Шаги: {steps} + {boost}", True, Colors.moves)
+        elif boost < 0:
+            boost_surface = Fonts.moves.render(f"Шаги: {steps} - {abs(boost)}", True, Colors.moves_red)
+        else:
+            boost_surface = Fonts.moves.render("", True, Colors.moves)
 
+        self.image.blit(boost_surface, boost_surface.get_rect(left=WIDTH / 20, centery=self.base_rect.centery))
+        self.image.blit(steps_surface, steps_surface.get_rect(left=WIDTH / 20, centery=self.base_rect.centery))
+        self.image.blit(moves_surface, moves_surface.get_rect(right=WIDTH - WIDTH / 20, centery=self.base_rect.centery))
+
+        surface.blit(self.image, self.rect)
+
+
+class CardSprite(pygame.sprite.Sprite):
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.card: Card | None = None
+
+        self.image = pygame.Surface((WIDTH - BORDER * 2, HEIGHT - BORDER * 2), pygame.SRCALPHA)
+        self.rect = self.image.get_rect(left=BORDER, top=BORDER)
+        self.base_rect = self.image.get_rect()
+
+    def draw(self, surface: pygame.Surface) -> None:
+        if not self.card:
+            return
+
+        self.image.fill(Colors.card_bg_fade)
+
+        title_surface = Fonts.card_title.render(self.card.title, True, self.card.type.value)
+        rarity_surface = Fonts.card_rarity.render(f"Редкость: {self.card.rarity}", True, Colors.card_rarity)
+
+        description_surface = pygame.Surface((self.base_rect.width, self.base_rect.height * 0.5), pygame.SRCALPHA)
+        description_rect = description_surface.get_rect()
+        for index, string in enumerate(split_card_description(self.card.description)):
+            string_surface = Fonts.card_description.render(string, True, Colors.card_description)
+            description_surface.blit(
+                string_surface,
+                string_surface.get_rect(centerx=description_rect.centerx, top=description_rect.height / 8 * index)
+            )
+
+        self.image.blit(title_surface, title_surface.get_rect(centerx=self.base_rect.centerx))
         self.image.blit(
-            steps_surface,
-            steps_surface.get_rect(left=WIDTH / 20, centery=self.image.get_rect().centery)
+            rarity_surface,
+            rarity_surface.get_rect(centerx=self.base_rect.centerx, bottom=self.base_rect.bottom)
         )
         self.image.blit(
-            moves_surface,
-            moves_surface.get_rect(right=WIDTH - WIDTH / 20, centery=self.image.get_rect().centery)
+            description_surface,
+            description_surface.get_rect(centerx=self.base_rect.centerx, top=self.base_rect.height / 4)
         )
 
         surface.blit(self.image, self.rect)

@@ -26,7 +26,7 @@ ANIMATION_SPEED = 4
 MAX_STEPS = 6
 TOTAL_MOVES = 99
 
-TARGET_REACHED_REWARD = 50
+MAX_DESCRIPTION_LINE_LENGTH = 40
 
 
 class Colors:
@@ -36,16 +36,31 @@ class Colors:
 
     background = Color("#444444")
 
+    text_white = Color("#dddddd")
+    text_bright_white = Color("#f0f0f0")
+    text_gray = Color("#888888")
+    text_red = Color("#fc2847")  # Скарлет
+    text_blue = Color("#1fcecb")  # Яиц странствующего дрозда
+
     empty_cell = Color("#888888")
 
-    stats = Color("#888888")
-    stats_current = Color("#dddddd")
+    stats = text_gray
+    stats_current = text_white
 
-    moves = Color("#dddddd")
+    moves = text_white
+    moves_red = text_red
+
+    card_title_movement = text_red
+    card_title_economics = text_blue
+    card_title_life = text_bright_white
+    card_description = text_white
+    card_rarity = text_white
 
     gold = Color("#ffd700")
     silver = Color("#c0c0c0")
     bronze = Color("#cd7f32")
+
+    card_bg_fade = Color("#000000aa")
 
 
 class Images:
@@ -59,6 +74,10 @@ class Fonts:
 
     stats = Font(Path(fonts_dir, "inter.ttf"), 32)
     moves = Font(Path(fonts_dir, "inter.ttf"), 48)
+
+    card_title = Font(Path(fonts_dir, "inter.ttf"), 56)
+    card_description = Font(Path(fonts_dir, "inter.ttf"), 24)
+    card_rarity = Font(Path(fonts_dir, "inter.ttf"), 32)
 
 
 class CellType(Enum):
@@ -95,9 +114,29 @@ class DirectionType(Enum):
         return self.name
 
 
+class Money:
+    target_reached_reward = 50
+
+    oblomov_income = 1
+    shtoltz_income = 3
+    olga_income = 2
+    tarantiev_stealth_amount = {
+        PlayerType.OBLOMOV: 4,
+        PlayerType.SHTOLTZ: 0,
+        PlayerType.OLGA: 2
+    }
+
+
 place_to_color = [
     Colors.gold,
     Colors.silver,
     Colors.bronze,
     Colors.stats
 ]
+
+player_order = (
+    PlayerType.OBLOMOV,
+    PlayerType.SHTOLTZ,
+    PlayerType.OLGA,
+    PlayerType.TARANTIEV
+)
