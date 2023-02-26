@@ -32,6 +32,7 @@ class Game:
         self.boosts = dict.fromkeys(player_order, 0)
         self.steps_left = self.throw_dice()  # how many squares can player move before their move ends
         self.game_over = False
+        self.bad_ending = False
         self.reward_available = True
         self.getting_bonus_income = dict.fromkeys(player_order, 0)  # how many times players would get bonus
 
@@ -55,7 +56,7 @@ class Game:
     def draw(self) -> None:
         self.surface.fill("#444444")
 
-        self.players_sprite.draw(self.surface, self.balances, self.current_player, self.game_over)
+        self.players_sprite.draw(self.surface, self.balances, self.current_player, self.game_over, self.bad_ending)
         self.moves_sprite.draw(self.surface, self.moves_left, self.steps_left, self.boosts[self.current_player])
 
         self.field_sprite.draw(self.surface)
@@ -121,6 +122,8 @@ class Game:
             self.moves_left -= 1
 
             if self.moves_left == 0:
+                if not self.game_over:
+                    self.bad_ending = True
                 self.game_over = True
             else:
                 self.steps_left = self.throw_dice()

@@ -24,7 +24,8 @@ class PlayersSprite(pygame.sprite.Sprite):
             surface: pygame.Surface,
             balances: dict[PlayerType, int],
             current_player: PlayerType,
-            final: bool = False
+            final: bool = False,
+            bad_ending: bool = False
     ) -> None:
         places = sorted(set(balances.values()), reverse=True) if final else None
 
@@ -34,14 +35,18 @@ class PlayersSprite(pygame.sprite.Sprite):
             name_surface = Fonts.stats.render(
                 str(player),
                 True,
-                place_to_color[places.index(balance)] if final else (
+                (
+                    Colors.text_red if bad_ending else place_to_color[places.index(balance)]
+                ) if final else (
                     Colors.stats_current if player == current_player else Colors.stats
                 )
             )
             balance_surface = Fonts.stats.render(
                 str(balance),
                 True,
-                place_to_color[places.index(balance)] if final else (
+                (
+                    Colors.text_red if bad_ending else place_to_color[places.index(balance)]
+                ) if final else (
                     Colors.stats_current if player == current_player else Colors.stats
                 )
             )
