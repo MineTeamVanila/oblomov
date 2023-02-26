@@ -1,6 +1,8 @@
+from pathlib import Path
 from math import copysign
 
 import pygame
+from pygame.image import load
 
 from cards import Card, CardType
 from util import random_cell, random_aim_cell, cell_distance, split_card_description
@@ -61,6 +63,16 @@ class PlayersSprite(pygame.sprite.Sprite):
         surface.blit(self.image, self.rect)
 
 
+class FieldBackground(pygame.sprite.Sprite):
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.image = pygame.Surface((WIDTH - BORDER * 2, HEIGHT - BORDER * 2))
+        self.rect = self.image.get_rect(left=BORDER, top=BORDER)
+
+        self.image.fill(Colors.field_background)
+
+
 class CellSprite(pygame.sprite.Sprite):
     def __init__(self, x: int, y: int, cell_type: CellType, card_type: CardType | None) -> None:
         super().__init__()
@@ -68,13 +80,20 @@ class CellSprite(pygame.sprite.Sprite):
         self.x = x  # on the field
         self.y = y  # on the field
         self.type = cell_type
+        self.card_type = card_type
 
-        self.image = pygame.Surface((CELL_SIZE, CELL_SIZE))
-        self.rect = self.image.get_rect(left=BORDER + self.x * CELL_SIZE, top=BORDER + self.y * CELL_SIZE)
+        self.image = load(path) if (
+            path := Path(Images.images_dir, "_".join(filter(lambda s: s, [
+                "cell", self.type.name.lower(), self.card_type.name.lower() if self.card_type else None
+            ])) + ".png")
+        ).exists() else pygame.Surface((CELL_SIZE, CELL_SIZE), pygame.SRCALPHA)
+        self.rect = self.image.get_rect(
+            center=(BORDER + (self.x + 0.5) * CELL_SIZE, BORDER + (self.y + 0.5) * CELL_SIZE)
+        )
 
         match self.type:
             case CellType.EMPTY:
-                color = "#888888"
+                color = "#00000000"
             case CellType.OBSTACLE:
                 color = "#222222"
             case CellType.OBLOMOVKA:
@@ -88,23 +107,25 @@ class CellSprite(pygame.sprite.Sprite):
             case _:  # should not be the case
                 color = "#0000ff"
 
-        self.card_type = card_type
-
-        self.image.fill(color)
-        if self.card_type:
-            pygame.draw.polygon(
-                self.image,
-                self.card_type.value,
-                (
-                    (CELL_SIZE / 2, CELL_SIZE / 4), (CELL_SIZE * 0.75, CELL_SIZE / 2),
-                    (CELL_SIZE / 2, CELL_SIZE * 0.75), (CELL_SIZE / 4, CELL_SIZE / 2)
+        if not path.exists():
+            self.image.fill(color)
+            if self.card_type:
+                pygame.draw.polygon(
+                    self.image,
+                    self.card_type.value,
+                    (
+                        (CELL_SIZE / 2, CELL_SIZE / 4), (CELL_SIZE * 0.75, CELL_SIZE / 2),
+                        (CELL_SIZE / 2, CELL_SIZE * 0.75), (CELL_SIZE / 4, CELL_SIZE / 2)
+                    )
                 )
-            )
 
 
 class FieldSpriteGroup(pygame.sprite.Group):
     def __init__(self) -> None:
         super().__init__()
+
+        # noinspection PyTypeChecker
+        self.add(FieldBackground())
 
         self.obstacles = set()
         for _ in range(OBSTACLE_COUNT):

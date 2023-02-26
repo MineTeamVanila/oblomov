@@ -35,6 +35,7 @@ class Colors:
     wrong = Color("#0000ff")
 
     background = Color("#444444")
+    field_background = Color("#888888")
 
     text_white = Color("#dddddd")
     text_bright_white = Color("#f0f0f0")
