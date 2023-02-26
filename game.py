@@ -24,7 +24,7 @@ class Game:
 
         self.surface = surface
 
-        self.current_player = PlayerType.OBLOMOV
+        self.current_player = player_order[0]
         self.is_oblomov_sleeping = False
         self.balances = dict.fromkeys(player_order, 0)
 
@@ -151,7 +151,9 @@ class Game:
             self.reward_available = False
 
     def process_card(self, card: Card) -> None:
-        actions = card.action if isinstance(card.action, str) else card.action(self.balances, self.current_player)
+        actions = card.action if isinstance(card.action, str) else card.action(
+            self.balances, self.current_player, self.is_oblomov_sleeping
+        )
 
         for action in filter(lambda s: s, actions.split(";")):
             match tuple(map(lambda val: int(val) if val.isdigit() else val, action.strip().split())):
