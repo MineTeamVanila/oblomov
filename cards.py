@@ -1,24 +1,9 @@
 from typing import Literal, Callable
-from enum import Enum
 from dataclasses import dataclass
 from random import random, randint
 from math import ceil
 
-from constants import Colors, PlayerType, player_order
-
-
-class CardType(Enum):
-    MOVEMENT = Colors.card_title_movement
-    ECONOMICS = Colors.card_title_economics
-    LIFE = Colors.card_title_life
-
-    # aliases
-    RED = MOVEMENT
-    BLUE = ECONOMICS
-    WHITE = LIFE
-
-    def __str__(self) -> str:
-        return self.name
+from constants import PlayerType, CardType, player_order
 
 
 @dataclass

@@ -1,6 +1,8 @@
 from enum import Enum
 from pathlib import Path
+from random import randint
 
+import pygame
 from pygame import Color
 from pygame.image import load
 from pygame.font import Font, init as init_font
@@ -64,12 +66,6 @@ class Colors:
     card_bg_fade = Color("#000000aa")
 
 
-class Images:
-    images_dir = Path("assets", "images")
-
-    oblomov = load(Path(images_dir, "oblomov.png"))
-
-
 class Fonts:
     fonts_dir = Path("assets", "fonts")
 
@@ -79,6 +75,16 @@ class Fonts:
     card_title = Font(Path(fonts_dir, "inter.ttf"), 56)
     card_description = Font(Path(fonts_dir, "inter.ttf"), 24)
     card_rarity = Font(Path(fonts_dir, "inter.ttf"), 32)
+
+
+class PlayerType(Enum):
+    OBLOMOV = "Обломов"
+    SHTOLTZ = "Штольц"
+    OLGA = "Ольга"
+    TARANTIEV = "Тарантьев"
+
+    def __str__(self) -> str:
+        return self.value
 
 
 class CellType(Enum):
@@ -93,16 +99,6 @@ class CellType(Enum):
         return self.name
 
 
-class PlayerType(Enum):
-    OBLOMOV = "Обломов"
-    SHTOLTZ = "Штольц"
-    OLGA = "Ольга"
-    TARANTIEV = "Тарантьев"
-
-    def __str__(self) -> str:
-        return self.value
-
-
 class DirectionType(Enum):
     UP = 1
     DOWN = 2
@@ -113,6 +109,37 @@ class DirectionType(Enum):
 
     def __str__(self) -> str:
         return self.name
+
+
+class CardType(Enum):
+    MOVEMENT = Colors.card_title_movement
+    ECONOMICS = Colors.card_title_economics
+    LIFE = Colors.card_title_life
+
+    # aliases
+    RED = MOVEMENT
+    BLUE = ECONOMICS
+    WHITE = LIFE
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Images:
+    images_dir = Path("assets", "images")
+
+    @classmethod
+    def cell(cls, cell_type: CellType, card_type: CardType | None) -> pygame.Surface:
+        variant = randint(1, 2) if cell_type == CellType.OBSTACLE else ""
+        return load(path) if (
+            path := Path(cls.images_dir, "_".join(filter(lambda s: s, [
+                "cell", cell_type.name.lower(), card_type.name.lower() if card_type else "", str(variant)
+            ])) + ".png")
+        ).exists() else pygame.Surface((CELL_SIZE, CELL_SIZE), pygame.SRCALPHA)
+
+    @classmethod
+    def oblomov(cls, player: PlayerType) -> pygame.Surface:
+        return load(Path(cls.images_dir, f"oblomov_{player.name.lower()}.png"))
 
 
 class Money:

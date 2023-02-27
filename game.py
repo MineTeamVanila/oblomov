@@ -17,7 +17,7 @@ from constants import (
 class Game:
     def __init__(self, surface: pygame.Surface) -> None:
         self.field_sprite = FieldSpriteGroup()
-        self.oblomov_sprite = OblomovSprite(*CENTRAL_CELL)
+        self.oblomov_sprite = OblomovSprite(*CENTRAL_CELL, player_order[0])
         self.players_sprite = PlayersSprite()
         self.moves_sprite = MovesSprite()
         self.card_sprite = CardSprite()
@@ -60,7 +60,7 @@ class Game:
         self.moves_sprite.draw(self.surface, self.moves_left, self.steps_left, self.boosts[self.current_player])
 
         self.field_sprite.draw(self.surface)
-        self.oblomov_sprite.draw(self.surface)
+        self.oblomov_sprite.draw(self.surface, self.current_player)
 
         self.card_sprite.draw(self.surface)
 

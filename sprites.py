@@ -1,16 +1,14 @@
-from pathlib import Path
 from math import copysign
 
 import pygame
-from pygame.image import load
 
-from cards import Card, CardType
+from cards import Card
 from util import random_cell, random_aim_cell, cell_distance, split_card_description
 from constants import (
     WIDTH, HEIGHT, BORDER, FIELD_SIZE, CELL_SIZE,
     OBSTACLE_COUNT, MIN_AIM_DISTANCE, MIN_AIM_SPREAD, CENTRAL_CELL,
     ANIMATION_SPEED, place_to_color,
-    Colors, Images, Fonts, CellType, PlayerType, DirectionType
+    Colors, Images, Fonts, PlayerType, CellType, DirectionType, CardType
 )
 
 
@@ -85,11 +83,7 @@ class CellSprite(pygame.sprite.Sprite):
         self.type = cell_type
         self.card_type = card_type
 
-        self.image = load(path) if (
-            path := Path(Images.images_dir, "_".join(filter(lambda s: s, [
-                "cell", self.type.name.lower(), self.card_type.name.lower() if self.card_type else None
-            ])) + ".png")
-        ).exists() else pygame.Surface((CELL_SIZE, CELL_SIZE), pygame.SRCALPHA)
+        self.image = Images.cell(self.type, self.card_type)
         self.rect = self.image.get_rect(
             center=(BORDER + (self.x + 0.5) * CELL_SIZE, BORDER + (self.y + 0.5) * CELL_SIZE)
         )
@@ -110,7 +104,7 @@ class CellSprite(pygame.sprite.Sprite):
             case _:  # should not be the case
                 color = "#0000ff"
 
-        if not path.exists():
+        if self.type in (CellType.OBLOMOVKA, CellType.SHTOLTZ, CellType.OLGA, CellType.TARANTIEV):
             self.image.fill(color)
             if self.card_type:
                 pygame.draw.polygon(
@@ -204,7 +198,7 @@ class FieldSpriteGroup(pygame.sprite.Group):
 
 
 class OblomovSprite(pygame.sprite.Sprite):
-    def __init__(self, x: int, y: int) -> None:
+    def __init__(self, x: int, y: int, player: PlayerType) -> None:
         super().__init__()
 
         self.x = x
@@ -212,13 +206,15 @@ class OblomovSprite(pygame.sprite.Sprite):
         self.transition_x = 0
         self.transition_y = 0
 
-        self.image = Images.oblomov
+        self.image = Images.oblomov(player)
         self.rect = self.image.get_rect(
             centerx=BORDER + (self.x + 0.5) * CELL_SIZE,
             bottom=BORDER + (self.y + 1) * CELL_SIZE
         )
 
-    def draw(self, surface: pygame.Surface) -> None:
+    def draw(self, surface: pygame.Surface, player: PlayerType) -> None:
+        self.image = Images.oblomov(player)
+
         self.rect.left += (delta_x := copysign(ANIMATION_SPEED, self.transition_x) if self.transition_x else 0)
         self.rect.top += (delta_y := copysign(ANIMATION_SPEED, self.transition_y) if self.transition_y else 0)
         self.transition_x -= delta_x

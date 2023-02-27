@@ -1,7 +1,7 @@
 from random import randint, choice
 
-from cards import Card, CardType, cards_for_choice
-from constants import MAX_DESCRIPTION_LINE_LENGTH
+from cards import Card, cards_for_choice
+from constants import MAX_DESCRIPTION_LINE_LENGTH, CardType
 
 
 def random_cell(field_size: int) -> tuple[int, int]:
