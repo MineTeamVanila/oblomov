@@ -67,6 +67,9 @@ class FieldBackground(pygame.sprite.Sprite):
     def __init__(self) -> None:
         super().__init__()
 
+        self.x = -1  # For compatibility with other sprites of FieldSpriteGroup
+        self.y = -1  # For compatibility with other sprites of FieldSpriteGroup
+
         self.image = pygame.Surface((WIDTH - BORDER * 2, HEIGHT - BORDER * 2))
         self.rect = self.image.get_rect(left=BORDER, top=BORDER)
 
